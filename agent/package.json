@@ -1,0 +1,17 @@
+{
+  "name": "whitelist-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Endpoint control agent — enforces cloud-managed app/web/VPN policy",
+  "main": "src/index.js",
+  "bin": { "whitelist-agent": "src/index.js" },
+  "scripts": {
+    "start": "node src/index.js",
+    "install-service": "node src/service.js install",
+    "uninstall-service": "node src/service.js uninstall",
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "node-windows": "^1.0.0-beta.8"
+  }
+}

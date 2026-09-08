@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Whitelist Cloud — Control Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="login" class="login hidden">
+    <form id="loginForm" class="card">
+      <h1>Whitelist Cloud</h1>
+      <p class="muted">Endpoint control dashboard</p>
+      <label>Username <input name="username" autocomplete="username" required /></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required /></label>
+      <button type="submit">Sign in</button>
+      <p id="loginErr" class="err"></p>
+    </form>
+  </div>
+
+  <div id="app" class="hidden">
+    <header>
+      <strong>Whitelist Cloud</strong>
+      <nav>
+        <button data-tab="devices" class="active">Devices</button>
+        <button data-tab="policies">Policies</button>
+        <button data-tab="keys">Enrollment</button>
+      </nav>
+      <span class="spacer"></span>
+      <span id="who" class="muted"></span>
+      <button id="logout" class="ghost">Sign out</button>
+    </header>
+
+    <main>
+      <section id="tab-devices" class="tab"></section>
+      <section id="tab-policies" class="tab hidden"></section>
+      <section id="tab-keys" class="tab hidden"></section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden"><div class="modal-body card"></div></div>
+  <script src="app.js"></script>
+</body>
+</html>

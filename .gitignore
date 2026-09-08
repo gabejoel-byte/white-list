@@ -1,0 +1,9 @@
+node_modules/
+server/data/
+installer/dist/
+*.log
+*.db
+*.db-*
+baked-config.json
+.DS_Store
+Thumbs.db

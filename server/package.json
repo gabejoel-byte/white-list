@@ -1,0 +1,17 @@
+{
+  "name": "whitelist-cloud-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloud dashboard and policy server for the endpoint control agent",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "init-admin": "node src/scripts/init-admin.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1"
+  }
+}

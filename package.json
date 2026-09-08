@@ -1,0 +1,13 @@
+{
+  "name": "whitelist-cloud",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloud-managed endpoint control: app/web/VPN whitelisting & filtering for Windows",
+  "scripts": {
+    "setup": "cd server && npm install && cd ../agent && npm install",
+    "server": "cd server && npm start",
+    "init-admin": "cd server && npm run init-admin --",
+    "build-agent": "cd agent && node build.js"
+  },
+  "workspaces": ["server", "agent"]
+}
