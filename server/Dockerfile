@@ -1,6 +1,7 @@
 # Whitelist Cloud dashboard/server. better-sqlite3 is native, so we install the
 # build toolchain (node-gyp uses a prebuilt binary when available, else compiles).
-FROM node:20-bookworm-slim
+# Node 22+ is required by better-sqlite3 v13 (Node 20 segfaults on load).
+FROM node:22-bookworm-slim
 
 # Build deps for native modules (better-sqlite3). Kept minimal.
 RUN apt-get update && apt-get install -y --no-install-recommends \
