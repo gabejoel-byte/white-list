@@ -95,7 +95,7 @@ router.get('/devices', (req, res) => {
     ORDER BY d.last_seen DESC NULLS LAST`).all();
   const now = Date.now();
   res.json(rows.map((d) => ({
-    id: d.id, hostname: d.hostname, os: d.os, machineId: d.machine_id,
+    id: d.id, hostname: d.hostname, label: d.label, os: d.os, machineId: d.machine_id,
     policyId: d.policy_id, policyName: d.policy_name,
     policyVersion: d.policy_version, policyTargetVersion: d.policy_target_version,
     agentVersion: d.agent_version, lastSeen: d.last_seen, revoked: !!d.revoked,
@@ -108,6 +108,13 @@ router.put('/devices/:id/policy', (req, res) => {
   const { policyId } = req.body || {};
   db.prepare('UPDATE devices SET policy_id=?, policy_version=0 WHERE id=?').run(policyId || null, req.params.id);
   res.json({ ok: true });
+});
+
+// Friendly name for a device (so you can tell machines apart).
+router.put('/devices/:id/label', (req, res) => {
+  const label = (req.body?.label || '').toString().slice(0, 80).trim() || null;
+  db.prepare('UPDATE devices SET label=? WHERE id=?').run(label, req.params.id);
+  res.json({ ok: true, label });
 });
 
 router.post('/devices/:id/command', (req, res) => {

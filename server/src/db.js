@@ -102,4 +102,8 @@ CREATE TABLE IF NOT EXISTS ios_commands (
 CREATE INDEX IF NOT EXISTS idx_ioscmd ON ios_commands(udid, status, id);
 `);
 
+// --- lightweight migrations for columns added after first release ---
+const deviceCols = db.prepare('PRAGMA table_info(devices)').all().map((c) => c.name);
+if (!deviceCols.includes('label')) db.exec('ALTER TABLE devices ADD COLUMN label TEXT');
+
 module.exports = db;

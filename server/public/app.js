@@ -59,8 +59,19 @@ async function renderDevices() {
     const sel = el('select', { onchange: async (e) => { await api('PUT', `/devices/${d.id}/policy`, { policyId: e.target.value ? +e.target.value : null }); renderDevices(); } });
     sel.append(el('option', { value: '' }, '— none —'));
     for (const p of policies) sel.append(el('option', { value: p.id, selected: p.id === d.policyId }, `${p.name} (L${p.body.level})`));
+    const rename = async () => {
+      const cur = d.label || d.hostname || '';
+      const name = prompt('Name this device (e.g. "Front desk PC", "Kids iPad"):', cur);
+      if (name === null) return;
+      await api('PUT', `/devices/${d.id}/label`, { label: name });
+      renderDevices();
+    };
     tb.append(el('tr', {},
-      td(el('div', {}, el('strong', {}, d.hostname || d.id), el('br'), el('small', { className: 'muted mono' }, d.id))),
+      td(el('div', {},
+        el('strong', {}, d.label || d.hostname || d.id),
+        el('button', { className: 'small ghost', title: 'Rename', style: 'padding:1px 6px;margin-left:6px', onclick: rename }, '✎'),
+        el('br'),
+        el('small', { className: 'muted mono' }, (d.label ? d.hostname + ' · ' : '') + d.id))),
       td(el('span', { className: 'pill ' + (d.revoked ? 'off' : d.online ? 'on' : '') }, d.revoked ? 'revoked' : d.online ? 'online' : 'offline')),
       td(sel),
       td(el('span', { className: 'pill ' + (synced ? 'on' : 'off') }, synced ? `v${d.policyVersion}` : `v${d.policyVersion}→v${d.policyTargetVersion}`)),
@@ -75,7 +86,7 @@ async function renderDevices() {
 
 function deviceActions(d) {
   const box = el('div', {});
-  box.append(el('h2', {}, d.hostname || d.id), el('p', { className: 'muted mono' }, d.id));
+  box.append(el('h2', {}, d.label || d.hostname || d.id), el('p', { className: 'muted mono' }, (d.label ? d.hostname + ' · ' : '') + d.id));
   if (d.status) box.append(el('pre', { className: 'mono card' }, JSON.stringify(d.status, null, 2)));
   const cmd = (type, label, cls = 'ghost') => el('button', { className: 'small ' + cls, onclick: async () => { await api('POST', `/devices/${d.id}/command`, { type }); alert(`${label} queued — delivered on next heartbeat`); } }, label);
   box.append(el('div', { className: 'row' },
