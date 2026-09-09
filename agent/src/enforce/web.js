@@ -9,11 +9,10 @@
 //   3. hosts file entries — sinkhole blacklisted / category domains to 0.0.0.0
 //      so even proxy-unaware clients are blocked, and force SafeSearch by
 //      mapping search engines to their safe VIPs.
-const http = require('http');
-const net = require('net');
 const fs = require('fs');
-const path = require('path');
 const { log, run, ps, isDryRun, requireMode } = require('../lib/util');
+const coreFilter = require('../../../core/filter');
+const { createFilterProxy } = require('../../../core/proxy');
 
 let CATEGORIES = {};
 try { CATEGORIES = require('../data/categories.json'); } catch { CATEGORIES = {}; }
@@ -31,86 +30,24 @@ const SAFE_SEARCH = {
   'youtube.com': 'restrict.youtube.com',
 };
 
-function normHost(h) { return String(h || '').toLowerCase().replace(/:.*/, '').replace(/\.$/, ''); }
+// Filtering logic now lives in the shared core; re-export with this agent's
+// bundled category map injected, so callers/tests keep the 2-arg signatures.
+const { normHost, domainMatches } = coreFilter;
+const categoryDomains = (cats) => coreFilter.categoryDomains(cats, CATEGORIES);
+const verdict = (host, web) => coreFilter.verdict(host, web, CATEGORIES);
 
-function domainMatches(host, pattern) {
-  host = normHost(host); pattern = String(pattern).toLowerCase().trim();
-  if (!pattern) return false;
-  // "*.example.com" = subdomains only (strict). A bare "example.com" matches
-  // the apex AND its subdomains, so use that form when you want both.
-  if (pattern.startsWith('*.')) return host.endsWith('.' + pattern.slice(2));
-  return host === pattern || host.endsWith('.' + pattern);
-}
-
-function categoryDomains(cats) {
-  const out = [];
-  for (const c of cats || []) for (const d of CATEGORIES[c] || []) out.push(d);
-  return out;
-}
-
-// Decide allow/deny for a hostname under the current web policy.
-function verdict(host, web) {
-  host = normHost(host);
-  const denyList = [...(web.denyDomains || []), ...categoryDomains(web.categories)];
-  if (web.mode === 'whitelist') {
-    const allow = web.allowDomains || [];
-    const ok = allow.some((p) => domainMatches(host, p));
-    return ok ? 'allow' : 'deny';
-  }
-  if (web.mode === 'blacklist') {
-    const blocked = denyList.some((p) => domainMatches(host, p));
-    return blocked ? 'deny' : 'allow';
-  }
-  return 'allow';
-}
-
-// ---------------- filtering proxy ----------------
-let server = null;
+// ---------------- filtering proxy (shared core) ----------------
 let currentWeb = { mode: 'off' };
 const onBlockCbs = [];
-
-function startProxy(port) {
-  if (server || isDryRun()) return;
-  server = http.createServer((req, res) => {
-    const host = normHost(req.headers.host);
-    if (verdict(host, currentWeb) === 'deny') return blockHttp(res, host);
-    // Forward plain HTTP.
-    const u = new URL(req.url, `http://${req.headers.host}`);
-    const proxyReq = http.request({ host: u.hostname, port: u.port || 80, path: u.pathname + u.search, method: req.method, headers: req.headers },
-      (pr) => { res.writeHead(pr.statusCode, pr.headers); pr.pipe(res); });
-    proxyReq.on('error', () => { try { res.writeHead(502); res.end('proxy error'); } catch {} });
-    req.pipe(proxyReq);
-  });
-  // HTTPS tunnelling: filter on the CONNECT target, then blind-tunnel if allowed.
-  server.on('connect', (req, clientSocket, head) => {
-    const host = normHost(req.url);
-    if (verdict(host, currentWeb) === 'deny') {
-      reportBlock(host);
-      clientSocket.write('HTTP/1.1 403 Forbidden\r\n\r\nBlocked by Whitelist Cloud policy');
-      return clientSocket.destroy();
-    }
-    const [h, p] = req.url.split(':');
-    const upstream = net.connect(p || 443, h, () => {
-      clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
-      upstream.write(head); upstream.pipe(clientSocket); clientSocket.pipe(upstream);
-    });
-    upstream.on('error', () => clientSocket.destroy());
-    clientSocket.on('error', () => upstream.destroy());
-  });
-  server.on('clientError', (e, sock) => { try { sock.end('HTTP/1.1 400\r\n\r\n'); } catch {} });
-  server.listen(port, '127.0.0.1', () => log('web: filtering proxy on 127.0.0.1:' + port));
-}
-
-function blockHttp(res, host) {
-  reportBlock(host);
-  res.writeHead(403, { 'content-type': 'text/html' });
-  res.end(`<!doctype html><meta charset=utf-8><title>Blocked</title>
-    <body style="font:16px system-ui;background:#0e1116;color:#e6edf3;text-align:center;padding:12vh">
-    <h1>Access blocked</h1><p><b>${host}</b> is not permitted by your organisation's policy.</p>
-    <p style="color:#8b96a5">Whitelist Cloud</p>`);
-}
-function reportBlock(host) { for (const cb of onBlockCbs) try { cb(host); } catch {} }
 function onBlock(cb) { onBlockCbs.push(cb); }
+
+const proxy = createFilterProxy({
+  getPolicy: () => currentWeb,
+  categories: CATEGORIES,
+  onBlock: (host) => { for (const cb of onBlockCbs) try { cb(host); } catch {} },
+  onLog: (m) => log('web:', m),
+});
+function startProxy(port) { if (!isDryRun()) proxy.start(port); }
 
 // ---------------- hosts file + system proxy ----------------
 function buildHostsBlock(web) {
