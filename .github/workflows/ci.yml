@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'   # better-sqlite3 v13 requires Node >= 22
+
+      # Only two packages have real dependencies needed at test time.
+      - name: Install server deps
+        run: cd server && npm ci
+
+      - name: Install agent deps
+        run: cd agent && npm ci
+
+      # Runs every suite: agent, macOS, iOS, Android, and server (55 tests).
+      - name: Run all tests
+        run: npm test
