@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>cloud.whitelist.agent</string>
+
+  <!-- Bundled node runtime + the agent entry point (filled in by install.sh). -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>__INSTALL_DIR__/node</string>
+    <string>__INSTALL_DIR__/src/index.js</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>WL_LIVE</key><string>1</string>
+  </dict>
+
+  <!-- Start at boot and keep it alive: relaunch if it exits or is killed. -->
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>5</integer>
+
+  <key>StandardOutPath</key><string>/Library/Application Support/WhitelistAgent/stdout.log</string>
+  <key>StandardErrorPath</key><string>/Library/Application Support/WhitelistAgent/stderr.log</string>
+</dict>
+</plist>
