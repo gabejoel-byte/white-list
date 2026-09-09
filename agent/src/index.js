@@ -66,7 +66,7 @@ async function applyPolicy(p) {
   log('applying policy v' + p.version, 'level', p.level);
   await web.apply(p.web);
   await vpn.apply(p.vpn, { dnsResolver: p.web?.dnsResolver });
-  if (p.apps?.mode !== 'off') await apps.applyAppLocker(p.apps).catch((e) => log('applocker:', e.message));
+  if (p.apps?.mode !== 'off') await apps.applyDurable(p.apps).catch((e) => log('durable apps:', e.message));
   if (p.tamper?.preventUninstall) await tamper.hardenService().catch(() => {});
   policy = p; policyVersion = p.version;
   cfgStore.savePolicy(p);

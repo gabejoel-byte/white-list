@@ -120,6 +120,49 @@ function regQuery(key, value) {
     assert.strictEqual(realAfter, realBefore, 'real proxy must be identical to before the test');
   });
 
+  // ---- 6. app control: pure kill-decision logic (no processes harmed) ----
+  section('app control decisions');
+  const apps = require('../src/enforce/apps');
+  const procList = [
+    { name: 'chrome.exe', pid: 100 },
+    { name: 'notepad.exe', pid: 101 },
+    { name: 'explorer.exe', pid: 102 },   // critical — never killed
+    { name: 'lsass.exe', pid: 103 },      // critical — never killed
+    { name: 'game.exe', pid: 104 },
+  ];
+  await test('whitelist kills everything not allowed (but never criticals)', () => {
+    const kills = apps.decideKills(procList, { mode: 'whitelist', allow: ['chrome.exe'] });
+    const names = kills.map((k) => k.name).sort();
+    assert.deepStrictEqual(names, ['game.exe', 'notepad.exe']);
+    assert.ok(!names.includes('explorer.exe') && !names.includes('lsass.exe'));
+  });
+  await test('blacklist kills only denied', () => {
+    const kills = apps.decideKills(procList, { mode: 'blacklist', deny: ['game.exe'] });
+    assert.deepStrictEqual(kills.map((k) => k.name), ['game.exe']);
+  });
+  await test('off mode kills nothing', () => {
+    assert.deepStrictEqual(apps.decideKills(procList, { mode: 'off' }), []);
+  });
+  await test('AppLocker support: Home=false, Enterprise/Pro=true', () => {
+    assert.strictEqual(apps.appLockerSupported('Microsoft Windows 11 Home'), false);
+    assert.strictEqual(apps.appLockerSupported('Microsoft Windows 11 Enterprise'), true);
+    assert.strictEqual(apps.appLockerSupported('Microsoft Windows 11 Pro'), true);
+  });
+  await test('IFEO commands set a Debugger no-op per denied exe', () => {
+    const cmds = apps.ifeoCommands(['game.exe', 'C:\\x\\bad.exe']);
+    assert.strictEqual(cmds.length, 2);
+    assert.deepStrictEqual(cmds[0].slice(0, 2), ['add', 'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\game.exe']);
+    assert.ok(cmds[0].includes('Debugger'));
+    assert.strictEqual(cmds[1][1].endsWith('\\bad.exe'), true); // basename used
+  });
+  await test('WDAC build script is audit-mode by default, enforce on request', () => {
+    const audit = apps.wdacBuildScript({ mode: 'whitelist', allow: ['C:\\A\\a.exe'] });
+    assert.match(audit.script, /Set-RuleOption .* -Option 3(?! -Delete)/);  // audit kept
+    assert.match(audit.script, /ConvertFrom-CIPolicy/);
+    const enf = apps.wdacBuildScript({ mode: 'whitelist', allow: ['C:\\A\\a.exe'] }, { enforce: true });
+    assert.match(enf.script, /-Option 3 -Delete/);                          // audit removed => enforce
+  });
+
   // Cleanup: delete the scratch key and reset mode.
   try { execFileSync('reg.exe', ['delete', SCRATCH_KEY, '/f'], { stdio: 'ignore' }); } catch { /* may not exist */ }
   util.setMode('unset');
