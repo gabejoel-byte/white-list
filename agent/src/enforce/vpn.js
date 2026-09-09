@@ -13,7 +13,10 @@
 const { log, run, ps } = require('../lib/util');
 const { CRITICAL } = require('./apps');
 
-const VPN_PROCS = [
+let BYPASS = {};
+try { BYPASS = require('../data/bypass.json'); } catch { BYPASS = {}; }
+
+const VPN_PROCS = [...new Set([
   'openvpn.exe', 'openvpnserv.exe', 'wireguard.exe', 'wg.exe', 'tunnel.exe',
   'nordvpn.exe', 'nordvpn-service.exe', 'expressvpnd.exe', 'expressvpn.exe',
   'surfshark.exe', 'protonvpn.exe', 'protonvpnservice.exe', 'cyberghost.exe',
@@ -21,7 +24,8 @@ const VPN_PROCS = [
   'tunnelbear.exe', 'hotspotshield.exe', 'hsswd.exe', 'windscribe.exe',
   'wstunnel.exe', 'ovpnconnector.exe', 'vpnagent.exe', 'vpnui.exe',
   'psiphon3.exe', 'psiphon.exe', 'ultrasurf.exe', 'lantern.exe', 'tor.exe',
-];
+  ...(BYPASS.extraVpnProcs || []),
+].map((s) => s.toLowerCase()))];
 
 const RULE_PREFIX = 'WhitelistAgent-VPN';
 

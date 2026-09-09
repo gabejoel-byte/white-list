@@ -60,8 +60,18 @@ if (Test-Path (Join-Path $Dest 'src\service.js')) {
 
 # --- undo enforcement side-effects ---
 Write-Host 'Reverting system changes...'
-# Remove our firewall rules.
+# Remove our firewall rules (VPN + DoH blocks).
 Get-NetFirewallRule -DisplayName 'WhitelistAgent-*' -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
+# Revert the browser DoH-off policies we set.
+foreach ($k in @(
+  'HKLM:\SOFTWARE\Policies\Google\Chrome',
+  'HKLM:\SOFTWARE\Policies\Microsoft\Edge',
+  'HKLM:\SOFTWARE\Policies\Chromium',
+  'HKLM:\SOFTWARE\Policies\BraveSoftware\Brave')) {
+  Remove-ItemProperty -Path $k -Name 'DnsOverHttpsMode' -ErrorAction SilentlyContinue
+  Remove-ItemProperty -Path $k -Name 'BuiltInDnsClientEnabled' -ErrorAction SilentlyContinue
+}
+Remove-Item -Path 'HKLM:\SOFTWARE\Policies\Mozilla\Firefox\DNSOverHTTPS' -Recurse -Force -ErrorAction SilentlyContinue
 # Clear the forced system proxy.
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
 Set-ItemProperty -Path $key -Name ProxyEnable -Value 0 -ErrorAction SilentlyContinue

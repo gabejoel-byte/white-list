@@ -10,6 +10,7 @@ const { log, setDryRun, setLive, isDryRun } = require('./lib/util');
 const apps = require('./enforce/apps');
 const web = require('./enforce/web');
 const vpn = require('./enforce/vpn');
+const bypass = require('./enforce/bypass');
 const tamper = require('./enforce/tamper');
 
 const AGENT_VERSION = require('./../package.json').version;
@@ -64,7 +65,14 @@ async function ensureEnrolled() {
 
 async function applyPolicy(p) {
   log('applying policy v' + p.version, 'level', p.level);
+  // Close DNS bypass whenever we filter (SafeSearch or whitelist); close VPN
+  // provider domains whenever VPN is blocked. Network-layer only — never the
+  // logon path, so this can't lock anyone out of Windows.
+  p.web = p.web || {};
+  p.web.blockDoH = !!(p.web.forceSafeSearch || p.web.mode === 'whitelist' || p.web.mode === 'blacklist');
+  p.web.blockVpnDomains = !!p.vpn?.block;
   await web.apply(p.web);
+  await bypass.apply(p.web).catch((e) => log('bypass:', e.message));
   await vpn.apply(p.vpn, { dnsResolver: p.web?.dnsResolver });
   if (p.apps?.mode !== 'off') await apps.applyDurable(p.apps).catch((e) => log('durable apps:', e.message));
   if (p.tamper?.preventUninstall) await tamper.hardenService().catch(() => {});

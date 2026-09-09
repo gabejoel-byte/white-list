@@ -49,6 +49,8 @@ async function ensureEnrolled() {
 
 async function applyPolicy(p) {
   log('applying policy v' + p.version, 'level', p.level);
+  p.web = p.web || {};
+  p.web.blockVpnDomains = !!p.vpn?.block; // sinkhole VPN provider domains when VPN blocked
   await web.apply(p.web);
   await vpn.apply(p.vpn);
   if (p.apps?.mode !== 'off') await apps.applyDurable(p.apps).catch((e) => log('durable:', e.message));

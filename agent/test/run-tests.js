@@ -163,6 +163,24 @@ function regQuery(key, value) {
     assert.match(enf.script, /-Option 3 -Delete/);                          // audit removed => enforce
   });
 
+  // ---- 7. bypass hardening (DoH + VPN domains in hosts) ----
+  section('bypass hardening');
+  await test('blockDoH sinkholes known DoH endpoints', () => {
+    const b = web.buildHostsBlock({ mode: 'blacklist', denyDomains: [], blockDoH: true });
+    assert.match(b, /0\.0\.0\.0 cloudflare-dns\.com/);
+    assert.match(b, /dns\.google/);
+  });
+  await test('blockVpnDomains sinkholes VPN providers', () => {
+    const b = web.buildHostsBlock({ mode: 'blacklist', denyDomains: [], blockVpnDomains: true });
+    assert.match(b, /nordvpn\.com/);
+    assert.match(b, /expressvpn\.com/);
+  });
+  await test('no DoH/VPN sinkhole when flags are off', () => {
+    const b = web.buildHostsBlock({ mode: 'blacklist', denyDomains: ['x.com'] });
+    assert.ok(!/cloudflare-dns\.com/.test(b));
+    assert.ok(!/nordvpn\.com/.test(b));
+  });
+
   // Cleanup: delete the scratch key and reset mode.
   try { execFileSync('reg.exe', ['delete', SCRATCH_KEY, '/f'], { stdio: 'ignore' }); } catch { /* may not exist */ }
   util.setMode('unset');

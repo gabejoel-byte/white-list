@@ -1,0 +1,32 @@
+{
+  "_comment": "Known bypass endpoints closed off when a policy enables filtering. DoH hosts + resolver IPs (so browsers can't DNS-over-HTTPS around the hosts filter), VPN provider domains (so VPN apps can't fetch config/connect), and extra VPN client process names. All applied at the network layer only — never touches logon.",
+  "dohHosts": [
+    "cloudflare-dns.com", "mozilla.cloudflare-dns.com", "chrome.cloudflare-dns.com",
+    "dns.google", "dns.google.com", "dns64.dns.google",
+    "dns.quad9.net", "dns10.quad9.net", "dns11.quad9.net",
+    "doh.opendns.com", "doh.familyshield.opendns.com",
+    "dns.adguard.com", "dns-family.adguard.com", "doh.dns.sb",
+    "doh.cleanbrowsing.org", "doh.cleanbrowsing.org.cdn.cloudflare.net",
+    "dns.nextdns.io", "chromium-dns.nextdns.io", "firefox.dns.nextdns.io",
+    "doh.libredns.gr", "dns.switch.ch", "odvr.nic.cz", "doh.mullvad.net", "dns.controld.com"
+  ],
+  "dohIPs": [
+    "1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "149.112.112.112",
+    "208.67.222.222", "208.67.220.220", "94.140.14.14", "94.140.15.15",
+    "76.76.2.0", "76.76.10.0", "185.228.168.9", "185.228.169.9"
+  ],
+  "vpnDomains": [
+    "nordvpn.com", "expressvpn.com", "protonvpn.com", "protonvpn.ch", "surfshark.com",
+    "cyberghostvpn.com", "privateinternetaccess.com", "mullvad.net", "windscribe.com",
+    "tunnelbear.com", "hide.me", "ipvanish.com", "purevpn.com", "hotspotshield.com",
+    "vyprvpn.com", "strongvpn.com", "privadovpn.com", "atlasvpn.com", "torproject.org",
+    "ultrasurf.us", "getlantern.org", "psiphon.ca", "psiphon3.com", "hola.org", "zenmate.com"
+  ],
+  "extraVpnProcs": [
+    "vpnclient.exe", "openvpngui.exe", "wireguard-service.exe", "torbrowser.exe",
+    "firefox.exe.tor", "warp-svc.exe", "cloudflarewarp.exe", "browsec.exe",
+    "zenmate.exe", "hola.exe", "urban-vpn.exe", "setupvpn.exe", "hoxx.exe",
+    "tunnelbear-maintenance.exe", "wgtunnel.exe", "outline.exe", "shadowsocks.exe",
+    "v2ray.exe", "clash.exe", "clash-verge.exe", "nekoray.exe", "sing-box.exe"
+  ]
+}

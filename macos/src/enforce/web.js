@@ -10,6 +10,8 @@ const { categoryDomains, normHost, safeSearchHostsLines } = require('../../../co
 
 let CATEGORIES = {};
 try { CATEGORIES = require('../data/categories.json'); } catch { CATEGORIES = {}; }
+let BYPASS = {};
+try { BYPASS = require('../data/bypass.json'); } catch { BYPASS = {}; }
 
 const HOSTS_PATH = '/etc/hosts';
 const MARK_BEGIN = '# >>> whitelist-agent (managed) >>>';
@@ -62,6 +64,9 @@ function buildHostsBlock(web) {
       sink.add(normHost(d)); sink.add('www.' + normHost(d));
     }
   }
+  const blockDoH = !!(web.forceSafeSearch || web.mode === 'whitelist' || web.mode === 'blacklist');
+  if (blockDoH) for (const h of BYPASS.dohHosts || []) sink.add(normHost(h));
+  if (web.blockVpnDomains) for (const d of BYPASS.vpnDomains || []) { sink.add(normHost(d)); sink.add('www.' + normHost(d)); }
   for (const d of sink) lines.push(`0.0.0.0 ${d}`);
   if (web.forceSafeSearch) for (const l of safeSearchHostsLines()) lines.push(l);
   lines.push(MARK_END);

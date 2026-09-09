@@ -16,6 +16,8 @@ const { createFilterProxy } = require('../../../core/proxy');
 
 let CATEGORIES = {};
 try { CATEGORIES = require('../data/categories.json'); } catch { CATEGORIES = {}; }
+let BYPASS = {};
+try { BYPASS = require('../data/bypass.json'); } catch { BYPASS = {}; }
 
 const HOSTS_PATH = 'C:\\Windows\\System32\\drivers\\etc\\hosts';
 const MARK_BEGIN = '# >>> whitelist-agent (managed) >>>';
@@ -58,6 +60,11 @@ function buildHostsBlock(web) {
       toSink.add(normHost(d)); toSink.add('www.' + normHost(d));
     }
   }
+  // Close DNS-over-HTTPS bypass: sinkhole known DoH endpoints so browsers can't
+  // resolve around the hosts filter.
+  if (web.blockDoH) for (const h of BYPASS.dohHosts || []) toSink.add(normHost(h));
+  // Close VPN-provider domains so VPN apps can't fetch config or connect.
+  if (web.blockVpnDomains) for (const d of BYPASS.vpnDomains || []) { toSink.add(normHost(d)); toSink.add('www.' + normHost(d)); }
   for (const d of toSink) lines.push(`0.0.0.0 ${d}`);
   if (web.forceSafeSearch) {
     // Real SafeSearch enforcement: Google SafeSearch + YouTube strict Restricted
