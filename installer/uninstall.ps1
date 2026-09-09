@@ -72,6 +72,12 @@ foreach ($k in @(
   Remove-ItemProperty -Path $k -Name 'BuiltInDnsClientEnabled' -ErrorAction SilentlyContinue
 }
 Remove-Item -Path 'HKLM:\SOFTWARE\Policies\Mozilla\Firefox\DNSOverHTTPS' -Recurse -Force -ErrorAction SilentlyContinue
+# Reset the firewall to defaults — undoes any egress lockdown (default-deny out).
+& netsh.exe advfirewall reset | Out-Null
+# Remove Safe Mode persistence entries.
+foreach ($sb in @('Minimal','Network')) {
+  Remove-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SafeBoot\$sb\WhitelistAgent" -Recurse -Force -ErrorAction SilentlyContinue
+}
 # Clear the forced system proxy.
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
 Set-ItemProperty -Path $key -Name ProxyEnable -Value 0 -ErrorAction SilentlyContinue

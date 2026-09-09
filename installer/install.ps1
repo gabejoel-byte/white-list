@@ -82,6 +82,16 @@ foreach ($p in @($Dest, $DataDir)) {
   & icacls.exe $p /grant:r "Users:(OI)(CI)RX" | Out-Null   # read/execute, no modify/delete
 }
 
+# --- Safe Mode persistence: register the service so it also runs in Safe Mode
+#     (closes the "boot Safe Mode to disable enforcement" bypass). This does NOT
+#     disable Safe Mode itself, so admin recovery via Safe Mode still works. ---
+Write-Host 'Registering Safe Mode persistence...'
+foreach ($sb in @('Minimal','Network')) {
+  $key = "HKLM:\SYSTEM\CurrentControlSet\Control\SafeBoot\$sb\WhitelistAgent"
+  New-Item -Path $key -Force | Out-Null
+  Set-ItemProperty -Path $key -Name '(Default)' -Value 'Service' -ErrorAction SilentlyContinue
+}
+
 Write-Host ''
 Write-Host 'Whitelist Agent installed and started.' -ForegroundColor Green
 Write-Host 'It will enrol and pull its policy from the dashboard within ~30s.'

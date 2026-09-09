@@ -159,8 +159,11 @@ function editPolicy(p) {
   const vpn = el('input', { type: 'checkbox', checked: !!b.vpn.block, style: 'width:auto' });
   const uninst = el('input', { type: 'checkbox', checked: !!b.tamper?.preventUninstall, style: 'width:auto' });
   const safe = el('input', { type: 'checkbox', checked: !!b.web.forceSafeSearch, style: 'width:auto' });
+  const egress = el('input', { type: 'checkbox', checked: !!b.vpn.egressLockdown, style: 'width:auto' });
   box.append(el('div', { className: 'row', style: 'margin:12px 0' },
     lblc(vpn, 'Block VPNs'), lblc(uninst, 'Prevent uninstall'), lblc(safe, 'Force SafeSearch')));
+  box.append(el('div', { className: 'row', style: 'margin:0 0 6px' }, lblc(egress, 'Egress lockdown — block ALL VPNs incl. 443 (Level 3 only)')));
+  box.append(el('small', { className: 'hint' }, 'Egress lockdown blocks every outbound connection except the agent, DNS and DHCP, so no VPN can tunnel out. Only takes effect in Level 3 (whitelist) where browsing goes through the local filter. Test on a spare machine first.'));
 
   const unlock = el('input', { type: 'password', placeholder: isNew ? 'set an unlock key' : 'leave blank to keep current' });
   box.append(el('label', {}, 'Admin unlock key', unlock));
@@ -178,7 +181,7 @@ function editPolicy(p) {
       level: +level.value,
       apps: { mode: +level.value === 3 ? 'whitelist' : +level.value === 2 ? 'blacklist' : 'off', allow: lines(appAllow), deny: lines(appDeny) },
       web: { mode: +level.value === 3 ? 'whitelist' : +level.value === 2 ? 'blacklist' : 'off', allowDomains: lines(webAllow), denyDomains: lines(webDeny), categories: [...cats.querySelectorAll('input:checked')].map((c) => c.id.slice(4)), forceSafeSearch: safe.checked },
-      vpn: { block: vpn.checked },
+      vpn: { block: vpn.checked, egressLockdown: egress.checked },
       tamper: { preventUninstall: uninst.checked, watchdog: uninst.checked },
     };
     try {

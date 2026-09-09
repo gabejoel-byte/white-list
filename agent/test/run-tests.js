@@ -181,6 +181,17 @@ function regQuery(key, value) {
     assert.ok(!/nordvpn\.com/.test(b));
   });
 
+  // ---- 8. egress lockdown rule generation ----
+  section('egress lockdown');
+  const egress = require('../src/enforce/egress');
+  await test('egress rules allow agent, DNS, DHCP (agent first)', () => {
+    const r = egress.egressRules();
+    assert.strictEqual(r[0].name, 'Agent');           // agent allowed first — never lose control
+    assert.ok(r.some((x) => x.name === 'DNS-UDP'));
+    assert.ok(r.some((x) => x.name === 'DHCP'));
+    assert.ok(egress.AGENT_NODE.length > 0);
+  });
+
   // Cleanup: delete the scratch key and reset mode.
   try { execFileSync('reg.exe', ['delete', SCRATCH_KEY, '/f'], { stdio: 'ignore' }); } catch { /* may not exist */ }
   util.setMode('unset');

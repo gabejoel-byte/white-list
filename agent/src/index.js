@@ -11,6 +11,7 @@ const apps = require('./enforce/apps');
 const web = require('./enforce/web');
 const vpn = require('./enforce/vpn');
 const bypass = require('./enforce/bypass');
+const egress = require('./enforce/egress');
 const tamper = require('./enforce/tamper');
 
 const AGENT_VERSION = require('./../package.json').version;
@@ -74,6 +75,10 @@ async function applyPolicy(p) {
   await web.apply(p.web);
   await bypass.apply(p.web).catch((e) => log('bypass:', e.message));
   await vpn.apply(p.vpn, { dnsResolver: p.web?.dnsResolver });
+  // Egress lockdown (opt-in, whitelist mode) closes VPN-over-443/obfuscated.
+  // Skip while an admin unlock is active so unlock restores full connectivity.
+  if (tamper.unlockActive()) await egress.clearEgressLockdown().catch(() => {});
+  else await egress.apply(p).catch((e) => log('egress:', e.message));
   if (p.apps?.mode !== 'off') await apps.applyDurable(p.apps).catch((e) => log('durable apps:', e.message));
   if (p.tamper?.preventUninstall) await tamper.hardenService().catch(() => {});
   policy = p; policyVersion = p.version;
@@ -84,7 +89,7 @@ async function applyPolicy(p) {
 async function handleCommands(commands) {
   for (const c of commands || []) {
     log('command:', c.type);
-    if (c.type === 'unlock') { tamper.unlockFromServer(c.payload?.minutes || 15); emit('unlock', 'server'); }
+    if (c.type === 'unlock') { tamper.unlockFromServer(c.payload?.minutes || 15); await egress.clearEgressLockdown().catch(() => {}); emit('unlock', 'server'); }
     else if (c.type === 'refresh') { policyVersion = 0; }
     else if (c.type === 'uninstall') { tamper.authorizeUninstall(); emit('uninstall_authorized', 'server'); }
     else if (c.type === 'reenroll') { delete cfg.deviceToken; cfgStore.save(cfg); }
@@ -119,8 +124,16 @@ async function heartbeat() {
 }
 
 // Fast loop: continuous enforcement of whatever policy is currently active.
+let unlockHandled = false;
 async function enforceTick() {
-  if (!policy || tamper.unlockActive()) return;
+  if (tamper.unlockActive()) {
+    // On entering an unlock window, lift egress lockdown once so connectivity
+    // is restored immediately (local `cli.js unlock` or server command).
+    if (!unlockHandled) { await egress.clearEgressLockdown().catch(() => {}); unlockHandled = true; }
+    return;
+  }
+  unlockHandled = false;
+  if (!policy) return;
   try {
     if (policy.apps?.mode && policy.apps.mode !== 'off') {
       const killed = await apps.sweep(policy.apps);
