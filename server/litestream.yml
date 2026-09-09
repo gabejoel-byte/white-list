@@ -1,0 +1,16 @@
+# Litestream config: continuously replicate the SQLite DB to S3-compatible
+# object storage (Backblaze B2 free tier — no card required). All values come
+# from env vars so nothing secret is committed. If B2_BUCKET is unset the
+# entrypoint skips Litestream and runs with ephemeral storage.
+dbs:
+  - path: /data/whitelist.db
+    replicas:
+      - type: s3
+        bucket: ${B2_BUCKET}
+        path: whitelist-db
+        endpoint: ${B2_ENDPOINT}      # e.g. s3.us-west-004.backblazeb2.com
+        region: ${B2_REGION}          # e.g. us-west-004
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+        # Small DB → cheap, frequent snapshots keep data loss to ~1s on restart.
+        sync-interval: 1s

@@ -3,10 +3,18 @@
 # Node 22+ is required by better-sqlite3 v13 (Node 20 segfaults on load).
 FROM node:22-bookworm-slim
 
-# Build deps for native modules (better-sqlite3). Kept minimal.
+# Build deps for native modules (better-sqlite3) + curl for fetching Litestream.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 make g++ ca-certificates \
+      python3 make g++ ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Litestream: streams the SQLite DB to S3-compatible storage (Backblaze B2 free
+# tier) for durability on hosts without a persistent disk. Optional at runtime —
+# the entrypoint only uses it when B2 credentials are present.
+ARG LITESTREAM_VERSION=0.3.13
+RUN curl -fsSL "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-v${LITESTREAM_VERSION}-linux-amd64.tar.gz" \
+      | tar -xz -C /usr/local/bin litestream \
+    && litestream version
 
 WORKDIR /app
 
@@ -20,6 +28,11 @@ COPY android ./android
 COPY ios ./ios
 COPY shared ./shared
 
+# Litestream config + entrypoint.
+COPY server/litestream.yml /etc/litestream.yml
+COPY server/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Persistent data (SQLite) lives here — mount a volume/disk at this path.
 ENV DATA_DIR=/data
 ENV PORT=8080
@@ -28,4 +41,6 @@ VOLUME ["/data"]
 EXPOSE 8080
 
 WORKDIR /app/server
-CMD ["node", "src/index.js"]
+# Entrypoint restores from B2 + runs under Litestream when configured, else runs
+# the server directly (ephemeral).
+CMD ["/entrypoint.sh"]
