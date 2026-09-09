@@ -28,6 +28,11 @@ COPY android ./android
 COPY ios ./ios
 COPY shared ./shared
 
+# Android live push needs googleapis in the image (the mapping/preview works
+# without it, but enterprises.policies.patch etc. require the SDK). No lockfile
+# in android/, so npm install rather than ci.
+RUN cd android && npm install --omit=dev --no-audit --no-fund
+
 # Litestream config + entrypoint.
 COPY server/litestream.yml /etc/litestream.yml
 COPY server/entrypoint.sh /entrypoint.sh
