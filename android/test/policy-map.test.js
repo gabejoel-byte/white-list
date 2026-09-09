@@ -40,9 +40,10 @@ test('blacklist web -> URLBlocklist includes denied + category domains', () => {
   assert.ok(mc.URLBlocklist.includes('facebook.com'));
   assert.ok(mc.URLBlocklist.includes('pornhub.com')); // from category map
 });
-test('forceSafeSearch -> ForceGoogleSafeSearch + incognito disabled', () => {
+test('forceSafeSearch -> ForceGoogleSafeSearch + YouTube strict + incognito disabled', () => {
   const mc = chromeManagedConfig({ mode: 'blacklist', denyDomains: [], forceSafeSearch: true });
   assert.strictEqual(mc.ForceGoogleSafeSearch, true);
+  assert.strictEqual(mc.ForceYouTubeRestrict, 2);
   assert.strictEqual(mc.IncognitoModeAvailability, 1);
 });
 test('web policy force-installs Chrome with the managed config attached', () => {

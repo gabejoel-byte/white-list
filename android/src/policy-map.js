@@ -42,6 +42,7 @@ function chromeManagedConfig(web) {
   }
   if (web.forceSafeSearch) {
     cfg.ForceGoogleSafeSearch = true;
+    cfg.ForceYouTubeRestrict = 2;        // 2 = strict, 1 = moderate, 0 = off
     cfg.IncognitoModeAvailability = 1;   // 1 = incognito disabled (else it bypasses filtering)
   }
   return cfg;

@@ -36,4 +36,23 @@ function verdict(host, web, categoriesMap = {}) {
   return 'allow';
 }
 
-module.exports = { normHost, domainMatches, categoryDomains, verdict };
+// hosts-file lines that force SafeSearch by pinning search domains to the
+// providers' published "safe" VIP addresses. Google SafeSearch and YouTube
+// strict Restricted Mode both use 216.239.38.120; Bing strict is 204.79.197.220.
+// (hosts can't CNAME, so we pin the IPs — the standard method schools use.)
+function safeSearchHostsLines() {
+  const GOOGLE_SAFE = '216.239.38.120';   // forcesafesearch.google.com
+  const YT_RESTRICT = '216.239.38.120';   // restrict.youtube.com (strict)
+  const BING_STRICT = '204.79.197.220';   // strict.bing.com
+  const google = ['www.google.com', 'google.com', 'www.google.co.uk', 'www.google.ca',
+    'www.google.com.au', 'www.google.de', 'www.google.fr', 'www.google.es', 'www.google.co.in'];
+  const youtube = ['www.youtube.com', 'm.youtube.com', 'youtube.com',
+    'www.youtube-nocookie.com', 'youtubei.googleapis.com', 'youtube.googleapis.com'];
+  const out = [];
+  for (const d of google) out.push(`${GOOGLE_SAFE} ${d}`);
+  for (const d of youtube) out.push(`${YT_RESTRICT} ${d}`);
+  out.push(`${BING_STRICT} www.bing.com`, `${BING_STRICT} bing.com`);
+  return out;
+}
+
+module.exports = { normHost, domainMatches, categoryDomains, verdict, safeSearchHostsLines };

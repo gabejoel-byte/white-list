@@ -60,10 +60,9 @@ function buildHostsBlock(web) {
   }
   for (const d of toSink) lines.push(`0.0.0.0 ${d}`);
   if (web.forceSafeSearch) {
-    // Point search engines at their safe VIPs by hostname (resolved via a note;
-    // hosts can't CNAME, so we add the standard documented mappings if present).
-    for (const [from] of Object.entries(SAFE_SEARCH)) lines.push(`# safesearch pin: ${from}`);
-    lines.push('216.239.38.120 forcesafesearch.google.com');
+    // Real SafeSearch enforcement: Google SafeSearch + YouTube strict Restricted
+    // Mode + Bing Strict, by pinning the search domains to their safe VIPs.
+    for (const l of coreFilter.safeSearchHostsLines()) lines.push(l);
   }
   lines.push(MARK_END);
   return lines.join('\r\n');

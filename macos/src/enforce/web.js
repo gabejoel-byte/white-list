@@ -6,7 +6,7 @@
 const fs = require('fs');
 const { log, run, isDryRun, requireMode } = require('../lib/util');
 const { createFilterProxy } = require('../../../core/proxy');
-const { categoryDomains, normHost } = require('../../../core/filter');
+const { categoryDomains, normHost, safeSearchHostsLines } = require('../../../core/filter');
 
 let CATEGORIES = {};
 try { CATEGORIES = require('../data/categories.json'); } catch { CATEGORIES = {}; }
@@ -63,7 +63,7 @@ function buildHostsBlock(web) {
     }
   }
   for (const d of sink) lines.push(`0.0.0.0 ${d}`);
-  if (web.forceSafeSearch) lines.push('216.239.38.120 forcesafesearch.google.com');
+  if (web.forceSafeSearch) for (const l of safeSearchHostsLines()) lines.push(l);
   lines.push(MARK_END);
   return lines.join('\n');
 }
