@@ -93,7 +93,6 @@ function mapPolicy(policy) {
 
     // Housekeeping that makes a managed device behave.
     installUnknownSourcesAllowed: false,
-    developerSettingsDisabled: (policy.level || 3) >= 2,
   };
 
   // Kiosk (single-purpose) mode for lockdown when requested.
