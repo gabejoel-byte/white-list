@@ -95,17 +95,44 @@ const PROXY_REGKEY = process.env.WL_PROXY_REGKEY
 
 async function setSystemProxy(web) {
   const enable = web.mode === 'whitelist'; // force everything through the proxy
-  const key = PROXY_REGKEY;
-  if (enable) {
-    await run('reg.exe', ['add', key, '/v', 'ProxyEnable', '/t', 'REG_DWORD', '/d', '1', '/f']);
-    await run('reg.exe', ['add', key, '/v', 'ProxyServer', '/d', `127.0.0.1:${web.proxyPort || 18080}`, '/f']);
-    // No bypass list -> everything is filtered.
-    await run('reg.exe', ['add', key, '/v', 'ProxyOverride', '/d', '', '/f']);
-  } else {
-    // Blacklist/monitor modes rely on hosts + firewall, not a forced proxy.
-    await run('reg.exe', ['delete', key, '/v', 'ProxyServer', '/f']);
-    await run('reg.exe', ['add', key, '/v', 'ProxyEnable', '/t', 'REG_DWORD', '/d', '0', '/f']);
+  const port = web.proxyPort || 18080;
+
+  // Test path: when WL_PROXY_REGKEY is set, write to that single scratch key via
+  // reg.exe (never touches real settings) — used by the test suite.
+  if (process.env.WL_PROXY_REGKEY) {
+    const key = process.env.WL_PROXY_REGKEY;
+    if (enable) {
+      await run('reg.exe', ['add', key, '/v', 'ProxyEnable', '/t', 'REG_DWORD', '/d', '1', '/f']);
+      await run('reg.exe', ['add', key, '/v', 'ProxyServer', '/d', `127.0.0.1:${port}`, '/f']);
+      await run('reg.exe', ['add', key, '/v', 'ProxyOverride', '/d', '', '/f']);
+    } else {
+      await run('reg.exe', ['delete', key, '/v', 'ProxyServer', '/f']);
+      await run('reg.exe', ['add', key, '/v', 'ProxyEnable', '/t', 'REG_DWORD', '/d', '0', '/f']);
+    }
+    return;
   }
+
+  // Production: the agent runs as SYSTEM, but the WinINET proxy is PER-USER —
+  // so we must write it into every real logged-in user's hive (HKEY_USERS\
+  // S-1-5-21-*), not SYSTEM's. We also lock the proxy UI so a standard user
+  // can't switch it off. (Belt: egress lockdown blocks direct traffic anyway.)
+  const val = `127.0.0.1:${port}`;
+  const body = enable
+    ? `Set-ItemProperty -Path $k -Name ProxyEnable -Value 1 -Type DWord -Force;` +
+      `Set-ItemProperty -Path $k -Name ProxyServer -Value '${val}' -Force;` +
+      `Set-ItemProperty -Path $k -Name ProxyOverride -Value '' -Force;` +
+      `New-Item -Path $pk -Force | Out-Null; Set-ItemProperty -Path $pk -Name Proxy -Value 1 -Type DWord -Force;`
+    : `Set-ItemProperty -Path $k -Name ProxyEnable -Value 0 -Type DWord -Force;` +
+      `Remove-ItemProperty -Path $k -Name ProxyServer -ErrorAction SilentlyContinue;` +
+      `Remove-ItemProperty -Path $pk -Name Proxy -ErrorAction SilentlyContinue;`;
+  await ps(`$ErrorActionPreference='SilentlyContinue';
+    $sids = @(Get-ChildItem Registry::HKEY_USERS | Where-Object { $_.PSChildName -match '^S-1-5-21-[0-9-]+$' } | ForEach-Object { $_.PSChildName }) + '.DEFAULT';
+    foreach ($sid in $sids) {
+      $k = "Registry::HKEY_USERS\\$sid\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings";
+      $pk = "Registry::HKEY_USERS\\$sid\\Software\\Policies\\Microsoft\\Internet Explorer\\Control Panel";
+      New-Item -Path $k -Force | Out-Null;
+      ${body}
+    }`);
 }
 
 // Set the in-memory filtering rules and start the local proxy. This performs

@@ -191,6 +191,12 @@ function regQuery(key, value) {
     assert.ok(r.some((x) => x.name === 'DHCP'));
     assert.ok(egress.AGENT_NODE.length > 0);
   });
+  await test('egress allows whitelisted app paths (full paths only)', () => {
+    const r = egress.egressRules(['C:\\Program Files\\Bambu Studio\\bambu-studio.exe', 'chrome.exe']);
+    const progs = r.filter((x) => x.name.startsWith('App')).map((x) => x.args[1]);
+    assert.ok(progs.some((p) => p.includes('bambu-studio.exe')), 'full path allowed');
+    assert.ok(!progs.some((p) => p === 'chrome.exe'), 'bare name NOT firewall-allowed (killed instead)');
+  });
 
   // Cleanup: delete the scratch key and reset mode.
   try { execFileSync('reg.exe', ['delete', SCRATCH_KEY, '/f'], { stdio: 'ignore' }); } catch { /* may not exist */ }

@@ -107,6 +107,7 @@ async function heartbeat() {
       status: {
         level: policy?.level, unlockActive: tamper.unlockActive(),
         hostname: os.hostname(), uptime: Math.round(process.uptime()),
+        enforceTicks, lastKilledApps, appsMode: policy?.apps?.mode, webMode: policy?.web?.mode,
       },
       events,
     });
@@ -124,8 +125,11 @@ async function heartbeat() {
 }
 
 // Fast loop: continuous enforcement of whatever policy is currently active.
+let enforceTicks = 0;      // diagnostic: proves the fast loop is running
+let lastKilledApps = [];   // diagnostic: what the last sweep terminated
 let unlockHandled = false;
 async function enforceTick() {
+  enforceTicks++;
   if (tamper.unlockActive()) {
     // On entering an unlock window, lift egress lockdown once so connectivity
     // is restored immediately (local `cli.js unlock` or server command).
@@ -137,14 +141,14 @@ async function enforceTick() {
   try {
     if (policy.apps?.mode && policy.apps.mode !== 'off') {
       const killed = await apps.sweep(policy.apps);
-      if (killed.length) emit('app_block', killed.join(','));
+      if (killed.length) { lastKilledApps = killed; emit('app_block', killed.join(',')); }
     }
     if (policy.vpn?.block) {
       const k = await vpn.killVpnProcesses();
       if (k.length) emit('vpn_block', k.join(','));
     }
-    // Re-assert the system proxy so a user toggling it off is corrected fast.
-    if (policy.web?.mode === 'whitelist') await web.reassertSystemProxy();
+    // Note: the proxy is set + locked at policy-apply and egress lockdown blocks
+    // any direct bypass, so no heavy per-tick proxy re-assert is needed.
   } catch (e) { log('enforce tick error:', e.message); }
 }
 

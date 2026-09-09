@@ -17,28 +17,35 @@ const { log, run, ps } = require('../lib/util');
 
 const AGENT_NODE = process.execPath; // the node.exe running this agent
 
-// Pure: the ordered list of allow-rule specs (used by tests).
-function egressRules() {
-  return [
-    { name: 'Agent', args: ['-Program', AGENT_NODE] },
+// Pure: the ordered list of allow-rule specs (used by tests). Whitelisted apps
+// given as full paths get a program-scoped allow so they keep working; the
+// agent (its cloud link + the local proxy's outbound) is always allowed first.
+function egressRules(allowPrograms = []) {
+  const rules = [{ name: 'Agent', args: ['-Program', AGENT_NODE] }];
+  let i = 0;
+  for (const p of allowPrograms) {
+    if (/[\\/]/.test(p)) rules.push({ name: 'App' + (i++), args: ['-Program', p] }); // full path only
+  }
+  rules.push(
     { name: 'DNS-UDP', args: ['-Protocol', 'UDP', '-RemotePort', '53'] },
     { name: 'DNS-TCP', args: ['-Protocol', 'TCP', '-RemotePort', '53'] },
     { name: 'DHCP', args: ['-Protocol', 'UDP', '-RemotePort', '67,68'] },
     { name: 'NTP', args: ['-Protocol', 'UDP', '-RemotePort', '123'] },
-  ];
+  );
+  return rules;
 }
 
-async function applyEgressLockdown() {
+async function applyEgressLockdown(allowPrograms = []) {
   // 1) Allow-rules FIRST — especially the agent, so we never lose the cloud
-  //    link that can push an unlock/uninstall.
+  //    link that can push an unlock/uninstall. Whitelisted apps get to run.
   await ps(`Get-NetFirewallRule -DisplayName 'WhitelistAgent-Egress-*' -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue`);
-  for (const r of egressRules()) {
+  for (const r of egressRules(allowPrograms)) {
     const extra = r.args.map((a) => (a.startsWith('-') ? a : `'${a}'`)).join(' ');
     await ps(`New-NetFirewallRule -DisplayName 'WhitelistAgent-Egress-${r.name}' -Direction Outbound -Action Allow ${extra} -ErrorAction SilentlyContinue`);
   }
   // 2) THEN default-deny outbound.
   await run('netsh.exe', ['advfirewall', 'set', 'allprofiles', 'firewallpolicy', 'blockinbound,blockoutbound']);
-  log('egress: default-deny outbound ON — all direct tunnels (incl. 443) blocked; agent/DNS/DHCP allowed');
+  log('egress: default-deny outbound ON — direct internet blocked (incl. 443); agent + whitelisted apps + DNS/DHCP allowed');
 }
 
 async function clearEgressLockdown() {
@@ -49,9 +56,16 @@ async function clearEgressLockdown() {
 }
 
 async function apply(policy) {
-  const on = policy?.vpn?.egressLockdown && policy?.web?.mode === 'whitelist';
-  if (on) await applyEgressLockdown();
-  else await clearEgressLockdown();
+  // Whitelist (Level 3) auto-enables egress lockdown so the web filter is
+  // fail-CLOSED: anything bypassing the local proxy gets NO internet, rather
+  // than the open internet. Also honours the explicit vpn.egressLockdown flag.
+  const on = (policy?.web?.mode === 'whitelist') || !!policy?.vpn?.egressLockdown;
+  if (on) {
+    const allowPrograms = (policy?.apps?.allow || []).filter((a) => /[\\/]/.test(a));
+    await applyEgressLockdown(allowPrograms);
+  } else {
+    await clearEgressLockdown();
+  }
 }
 
 module.exports = { apply, applyEgressLockdown, clearEgressLockdown, egressRules, AGENT_NODE };
