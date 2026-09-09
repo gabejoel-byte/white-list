@@ -89,8 +89,14 @@ if (Test-Path $hosts) {
   $content = [regex]::Replace($content, '# >>> whitelist-agent \(managed\) >>>[\s\S]*?# <<< whitelist-agent \(managed\) <<<', '')
   Set-Content -Path $hosts -Value $content.TrimEnd() -Encoding ascii
 }
-# Clear any AppLocker policy we set (reset to empty).
-& powershell.exe -NoProfile -Command "Set-AppLockerPolicy -XmlPolicy '$env:TEMP\empty-applocker.xml' -ErrorAction SilentlyContinue" 2>$null | Out-Null
+# Clear any AppLocker policy we set (Pro/Enterprise only; silent no-op on Home).
+try {
+  $empty = Join-Path $env:TEMP 'wl-empty-applocker.xml'
+  '<AppLockerPolicy Version="1"></AppLockerPolicy>' | Set-Content -Path $empty -Encoding utf8
+  if (Get-Command Set-AppLockerPolicy -ErrorAction SilentlyContinue) {
+    Set-AppLockerPolicy -XmlPolicy $empty -ErrorAction SilentlyContinue
+  }
+} catch { }
 ipconfig /flushdns | Out-Null
 
 # --- remove files (release ACL first) ---
