@@ -15,9 +15,13 @@ catch { /* googleapis not installed yet; run `npm install` in android/ */ }
 
 function client() {
   if (!google) throw new Error('googleapis not installed — run `npm install` in android/');
-  const auth = new google.auth.GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/androidmanagement'],
-  });
+  const opts = { scopes: ['https://www.googleapis.com/auth/androidmanagement'] };
+  // On hosts without a key file (e.g. Render), pass the service-account JSON via
+  // GOOGLE_APPLICATION_CREDENTIALS_JSON; else fall back to the ADC file path.
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    opts.credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+  }
+  const auth = new google.auth.GoogleAuth(opts);
   return google.androidmanagement({ version: 'v1', auth });
 }
 

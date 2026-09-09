@@ -9,15 +9,18 @@ const { normalize } = require('./policy');
 let amapi = null;
 try { amapi = require('../../../android/src/amapi'); } catch { amapi = null; }
 
+function hasCreds() {
+  return !!(process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+}
 function isConfigured() {
-  return !!(process.env.GOOGLE_APPLICATION_CREDENTIALS && process.env.ENTERPRISE_NAME && amapi);
+  return !!(hasCreds() && process.env.ENTERPRISE_NAME && amapi);
 }
 
 function status() {
   return {
     configured: isConfigured(),
     enterprise: process.env.ENTERPRISE_NAME || null,
-    hasCredentials: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    hasCredentials: hasCreds(),
     sdkLoaded: !!amapi,
   };
 }
