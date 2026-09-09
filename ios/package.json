@@ -1,0 +1,11 @@
+{
+  "name": "whitelist-ios-mdm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iOS enforcement via Apple MDM — policy → configuration profile mapping + MDM scaffolding",
+  "main": "src/profile-map.js",
+  "scripts": {
+    "test": "node test/profile-map.test.js"
+  },
+  "dependencies": {}
+}
