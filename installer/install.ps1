@@ -42,7 +42,10 @@ Copy-Item -Path (Join-Path $Src 'watchdog.ps1')  -Destination $Dest -Force -Erro
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 
 # --- write config (server + enrollment key) ---
-$bakedPath = Join-Path $Dest 'baked-config.json'
+# baked-config.json lives under agent\ in the packaged layout (older builds put
+# it at the root) — check both.
+$bakedPath = Join-Path $Dest 'agent\baked-config.json'
+if (-not (Test-Path $bakedPath)) { $bakedPath = Join-Path $Dest 'baked-config.json' }
 $cfg = @{}
 if (Test-Path $bakedPath) { $cfg = Get-Content $bakedPath -Raw | ConvertFrom-Json }
 if ($Server) { $cfg.serverUrl = $Server }
