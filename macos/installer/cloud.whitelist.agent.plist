@@ -9,7 +9,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>__INSTALL_DIR__/node</string>
-    <string>__INSTALL_DIR__/src/index.js</string>
+    <string>__INSTALL_DIR__/agent/src/index.js</string>
   </array>
 
   <key>EnvironmentVariables</key>

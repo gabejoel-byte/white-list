@@ -22,8 +22,16 @@ esac; done
 echo "Installing to $DEST"
 launchctl bootout system "$PLIST_DEST" 2>/dev/null || true
 mkdir -p "$DEST" "$DATA"
-cp -R "$SRC/src" "$DEST/"
-[[ -f "$SRC/baked-config.json" ]] && cp "$SRC/baked-config.json" "$DEST/"
+# Layout mirrors the repo so the agent's ../../core requires resolve:
+# $DEST/agent/src + $DEST/core as siblings.
+mkdir -p "$DEST/agent"
+cp -R "$SRC/src" "$DEST/agent/"
+cp "$SRC/package.json" "$DEST/agent/" 2>/dev/null || true
+[[ -f "$SRC/baked-config.json" ]] && cp "$SRC/baked-config.json" "$DEST/agent/"
+# Bundle the shared core (repo layout: sibling of macos/; packaged: inside).
+if [[ -d "$SRC/../core" ]]; then cp -R "$SRC/../core" "$DEST/core";
+elif [[ -d "$SRC/core" ]]; then cp -R "$SRC/core" "$DEST/core";
+else echo "shared core/ not found next to the package."; exit 1; fi
 
 # Bundle a node runtime so the endpoint needs nothing pre-installed.
 if [[ -x "$SRC/node" ]]; then cp "$SRC/node" "$DEST/node";
@@ -32,7 +40,7 @@ else echo "No node runtime found to bundle."; exit 1; fi
 
 # Write config (server + enrollment key).
 CFG="$DATA/config.json"
-python3 - "$CFG" "$SERVER" "$KEY" "$DEST/baked-config.json" <<'PY'
+python3 - "$CFG" "$SERVER" "$KEY" "$DEST/agent/baked-config.json" <<'PY'
 import json,sys,os
 cfg_path,server,key,baked=sys.argv[1:5]
 cfg={}

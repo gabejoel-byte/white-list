@@ -14,7 +14,7 @@ $svc = Get-Service -Name 'WhitelistAgent' -ErrorAction SilentlyContinue
 if ($null -eq $svc) {
   # Service missing entirely — reinstall it from the on-disk package.
   if (Test-Path $Node) {
-    & $Node (Join-Path $Dest 'src\service.js') install | Out-Null
+    & $Node (Join-Path $Dest 'agent\src\service.js') install | Out-Null
   }
 } elseif ($svc.Status -ne 'Running') {
   Start-Service -Name 'WhitelistAgent'

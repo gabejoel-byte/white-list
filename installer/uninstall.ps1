@@ -25,7 +25,7 @@ if (-not $isAdmin) { Write-Error 'Uninstall must be run as Administrator.'; exit
 $Dest = Join-Path $env:ProgramFiles 'WhitelistAgent'
 $DataDir = Join-Path $env:ProgramData 'WhitelistAgent'
 $Node = Join-Path $Dest 'node.exe'
-$Cli  = Join-Path $Dest 'src\cli.js'
+$Cli  = Join-Path $Dest 'agent\src\cli.js'
 
 # --- authorisation gate ---
 $authorized = $false
@@ -50,9 +50,9 @@ Write-Host 'Uninstalling Whitelist Agent...'
 Unregister-ScheduledTask -TaskName 'WhitelistAgentWatchdog' -Confirm:$false -ErrorAction SilentlyContinue
 & sc.exe stop WhitelistAgent 2>$null | Out-Null
 Start-Sleep -Seconds 2
-if (Test-Path (Join-Path $Dest 'src\service.js')) {
+if (Test-Path (Join-Path $Dest 'agent\src\service.js')) {
   Push-Location $Dest
-  & $Node (Join-Path $Dest 'src\service.js') uninstall
+  & $Node (Join-Path $Dest 'agent\src\service.js') uninstall
   Pop-Location
   Start-Sleep -Seconds 3
 }

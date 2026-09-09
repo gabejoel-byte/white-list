@@ -54,7 +54,7 @@ Write-Host "Configured server: $($cfg.serverUrl)"
 # --- install the Windows service using the bundled node runtime ---
 Write-Host 'Installing service...'
 Push-Location $Dest
-& $Node (Join-Path $Dest 'src\service.js') install
+& $Node (Join-Path $Dest 'agent\src\service.js') install
 Pop-Location
 Start-Sleep -Seconds 3
 
