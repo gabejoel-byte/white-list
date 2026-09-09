@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 require('./db'); // ensure schema
 const agentRoutes = require('./routes/agent');
 const adminRoutes = require('./routes/admin');
+const mdmRoutes = require('./routes/mdm');
 
 const app = express();
 app.disable('x-powered-by');
@@ -14,8 +15,9 @@ app.use(cookieParser());
 
 app.get('/healthz', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
-app.use('/api/v1', agentRoutes);   // agent endpoints
+app.use('/api/v1', agentRoutes);   // desktop agent endpoints
 app.use('/admin/api', adminRoutes); // dashboard endpoints
+app.use('/mdm', mdmRoutes);         // Apple MDM device protocol
 
 // Static dashboard.
 app.use('/', express.static(path.join(__dirname, '..', 'public')));

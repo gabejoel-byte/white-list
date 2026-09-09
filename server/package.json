@@ -8,7 +8,7 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "init-admin": "node src/scripts/init-admin.js",
-    "test": "node test/android.test.js"
+    "test": "node test/android.test.js && node test/ios-mdm.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

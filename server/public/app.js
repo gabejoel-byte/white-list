@@ -41,6 +41,7 @@ async function render(tab) {
   if (tab === 'policies') return renderPolicies();
   if (tab === 'keys') return renderKeys();
   if (tab === 'android') return renderAndroid();
+  if (tab === 'ios') return renderIos();
 }
 
 // ---------- devices ----------
@@ -284,6 +285,64 @@ async function enrollAndroid(p) {
       el('button', { className: 'ghost', onclick: closeModal }, 'Close'));
     modal(box);
   } catch (e) { alert('Token failed: ' + e.message); }
+}
+
+// ---------- ios ----------
+async function renderIos() {
+  const root = $('#tab-ios'); root.innerHTML = '';
+  const [status, policies, devices] = await Promise.all([
+    api('GET', '/ios/status'), api('GET', '/policies'), api('GET', '/ios/devices'),
+  ]);
+  root.append(el('h2', {}, 'iOS / iPadOS (MDM)'));
+  root.append(el('p', { className: 'muted' }, 'Enforced by Apple MDM configuration profiles on supervised devices.'));
+
+  const pill = el('span', { className: 'pill ' + (status.ready ? 'on' : 'off') }, status.ready ? 'ready' : 'not configured');
+  root.append(el('div', { className: 'card' },
+    el('div', { className: 'row' }, el('strong', {}, 'MDM status:'), pill),
+    el('div', { className: 'muted', style: 'margin-top:6px' },
+      `server: ${status.serverUrl || '—'} · topic: ${status.topic || '—'} · APNs: ${status.apnsConfigured ? 'configured' : 'not configured'} · devices: ${status.deviceCount}`),
+    status.ready
+      ? el('div', { style: 'margin-top:8px' }, el('a', { href: '/mdm/enroll', target: '_blank' }, 'Download enrollment profile (.mobileconfig)'))
+      : el('small', { className: 'hint', style: 'margin-top:8px' }, 'Set MDM_SERVER_URL + MDM_TOPIC (and APNS_CERT/APNS_KEY for push). Profile preview works without them.')));
+
+  root.append(el('h3', {}, 'Enrolled devices'));
+  if (!devices.length) root.append(el('p', { className: 'muted' }, 'No iOS devices enrolled yet.'));
+  else {
+    const t = el('table'); t.append(el('thead', {}, tr(['UDID', 'Policy', 'Last seen', 'Apply policy'], true)));
+    const tb = el('tbody');
+    for (const d of devices) {
+      const sel = el('select', {});
+      sel.append(el('option', { value: '' }, '— choose —'));
+      for (const p of policies) sel.append(el('option', { value: p.id }, `${p.name} (L${p.body.level})`));
+      tb.append(el('tr', {},
+        td(el('span', { className: 'mono' }, d.udid)),
+        td(d.policy_id || '—'),
+        td(d.last_seen ? new Date(d.last_seen + 'Z').toLocaleString() : '—'),
+        td(el('div', { className: 'row' }, sel,
+          el('button', { className: 'small', onclick: async () => { if (!sel.value) return; try { await api('POST', `/ios/devices/${encodeURIComponent(d.udid)}/apply/${sel.value}`); alert('Profile queued + device woken.'); } catch (e) { alert(e.message); } } }, 'Apply'))),
+      ));
+    }
+    t.append(tb); root.append(t);
+  }
+
+  root.append(el('h3', {}, 'Policies → iOS profile'));
+  const t2 = el('table'); t2.append(el('thead', {}, tr(['Policy', 'Level', ''], true)));
+  const tb2 = el('tbody');
+  for (const p of policies) {
+    tb2.append(el('tr', {},
+      td(el('strong', {}, p.name)), td('L' + p.body.level),
+      td(el('button', { className: 'small ghost', onclick: () => previewIos(p) }, 'Preview .mobileconfig'))));
+  }
+  t2.append(tb2); root.append(t2);
+}
+async function previewIos(p) {
+  const r = await fetch(`/admin/api/ios/policies/${p.id}/preview`);
+  const xml = await r.text();
+  const box = el('div', {});
+  box.append(el('h2', {}, 'iOS profile — ' + p.name),
+    el('pre', { className: 'mono card', style: 'max-height:60vh;overflow:auto;white-space:pre-wrap' }, xml),
+    el('div', { className: 'row' }, el('button', { className: 'ghost', onclick: closeModal }, 'Close')));
+  modal(box);
 }
 
 // ---------- helpers ----------

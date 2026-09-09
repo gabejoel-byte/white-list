@@ -76,6 +76,30 @@ CREATE TABLE IF NOT EXISTS events (
   at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_events_device ON events(device_id, at);
+
+-- iOS/iPadOS devices enrolled over Apple MDM.
+CREATE TABLE IF NOT EXISTS ios_devices (
+  udid        TEXT PRIMARY KEY,
+  push_token  TEXT,
+  push_magic  TEXT,
+  topic       TEXT,
+  policy_id   INTEGER REFERENCES policies(id),
+  info        TEXT,                             -- JSON DeviceInformation
+  last_seen   TEXT,
+  enrolled_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Queued MDM commands per device (FIFO).
+CREATE TABLE IF NOT EXISTS ios_commands (
+  id           INTEGER PRIMARY KEY,
+  udid         TEXT NOT NULL,
+  command_uuid TEXT NOT NULL,
+  request_type TEXT,
+  payload      TEXT NOT NULL,                   -- command plist (XML)
+  status       TEXT NOT NULL DEFAULT 'queued',  -- queued | sent | acknowledged
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_ioscmd ON ios_commands(udid, status, id);
 `);
 
 module.exports = db;

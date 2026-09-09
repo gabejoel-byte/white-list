@@ -6,6 +6,7 @@ const { token, sha256 } = require('../lib/crypto');
 const { requireAdmin, createSession, verifySecret } = require('../lib/auth');
 const { normalize, preset } = require('../lib/policy');
 const android = require('../lib/android');
+const ios = require('../lib/ios');
 
 const router = express.Router();
 
@@ -153,6 +154,24 @@ router.post('/android/policies/:id/enrollment-token', async (req, res) => {
 
 router.get('/android/devices', async (req, res) => {
   try { res.json(await android.listDevices()); }
+  catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+});
+
+// ---- iOS (Apple MDM) ----
+router.get('/ios/status', (req, res) => res.json(ios.status()));
+
+// Preview the .mobileconfig a stored policy maps to (works without Apple creds).
+router.get('/ios/policies/:id/preview', (req, res) => {
+  const p = db.prepare('SELECT * FROM policies WHERE id = ?').get(+req.params.id);
+  if (!p) return res.status(404).json({ error: 'not_found' });
+  res.set('content-type', 'text/plain').send(ios.policyProfile(p.body));
+});
+
+router.get('/ios/devices', (req, res) => res.json(ios.listDevices()));
+
+// Queue a policy's profile onto an enrolled device (+ APNs wake).
+router.post('/ios/devices/:udid/apply/:policyId', async (req, res) => {
+  try { res.json(await ios.applyPolicy(req.params.udid, +req.params.policyId)); }
   catch (e) { res.status(e.status || 500).json({ error: e.message }); }
 });
 

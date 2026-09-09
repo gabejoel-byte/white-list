@@ -31,11 +31,15 @@ provides the MDM enrollment + command scaffolding.
 1. **Apple Developer account** + an **MDM push certificate** (APNs). You obtain a
    vendor signing cert, then a push cert via the Apple Push Certificates Portal;
    its **topic** goes in the enrollment profile.
-2. An **HTTPS MDM endpoint** serving the check-in + command protocol
-   (`/mdm/checkin`, `/mdm/command`). `src/mdm.js` builds the enrollment profile
-   and the command plists (`InstallProfile`, `RemoveProfile`, `DeviceInformation`);
-   wiring these into the dashboard server and adding an APNs push client is the
-   remaining server work.
+2. An **HTTPS MDM endpoint** serving the check-in + command protocol. **This is
+   now implemented in the dashboard server** (`server/src/routes/mdm.js`):
+   `GET /mdm/enroll`, `PUT /mdm/checkin` (Authenticate/TokenUpdate/CheckOut),
+   `PUT /mdm/command` (delivers queued `InstallProfile` etc.). Device/command
+   storage is in SQLite; the APNs wake client is `server/src/lib/apns.js`
+   (activates when `APNS_CERT`/`APNS_KEY` are set). Configure with
+   `MDM_SERVER_URL` + `MDM_TOPIC`. Manage from the dashboard's **iOS** tab.
+   Production hardening still to add: CMS signature verification on device
+   messages and SCEP device identity (called out in the code).
 3. **Supervision**: enroll the device via **Apple Configurator** (USB) or **Apple
    Business/School Manager** (automated enrollment). Supervision is what unlocks
    the restrictions above.
