@@ -1,0 +1,5 @@
+**/node_modules
+installer/dist
+server/data
+**/*.log
+.git

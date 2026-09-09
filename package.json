@@ -7,7 +7,9 @@
     "setup": "cd server && npm install && cd ../agent && npm install",
     "server": "cd server && npm start",
     "init-admin": "cd server && npm run init-admin --",
-    "build-agent": "cd agent && node build.js"
+    "build-agent": "cd agent && node build.js",
+    "test": "cd agent && npm test && cd ../macos && npm test && cd ../ios && npm test && cd ../android && npm test && cd ../server && npm test",
+    "ship": "node scripts/ship.js"
   },
   "workspaces": ["server", "agent"]
 }

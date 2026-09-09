@@ -1,0 +1,42 @@
+# Render.com blueprint for the Whitelist Cloud dashboard.
+# One-time: push this repo to GitHub (done), then in Render → New → Blueprint,
+# point it at this repo. Render builds the Dockerfile and deploys; every later
+# `git push` to main auto-deploys. A persistent disk keeps the SQLite DB across
+# deploys. See docs/DEPLOY.md for the full walkthrough and other hosts.
+services:
+  - type: web
+    name: whitelist-cloud
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: .
+    plan: starter            # has a persistent disk; free tier has no disk
+    healthCheckPath: /healthz
+    envVars:
+      - key: HTTPS
+        value: "1"
+      - key: DATA_DIR
+        value: /data
+      # First-run admin bootstrap (change ADMIN_PASS to a strong secret in the
+      # Render dashboard; it only applies on a fresh DB with no admins).
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASS
+        sync: false
+      # Android Management API (optional — set to enable live Android push):
+      - key: ENTERPRISE_NAME
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        sync: false
+      # iOS MDM (optional — set to enable live iOS):
+      - key: MDM_SERVER_URL
+        sync: false
+      - key: MDM_TOPIC
+        sync: false
+      - key: APNS_CERT
+        sync: false
+      - key: APNS_KEY
+        sync: false
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
