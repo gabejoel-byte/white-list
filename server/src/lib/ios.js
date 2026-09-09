@@ -31,8 +31,13 @@ function enrollmentProfile() {
 // The policy profile (what actually enforces the rules) for a stored policy.
 function policyProfile(policyBody) {
   const p = normalize(policyBody);
-  // Force the global proxy in whitelist mode toward the cloud filtering proxy.
-  if (p.web?.mode === 'whitelist') { p.forceProxy = true; p.web.proxyHost = process.env.FILTER_PROXY_HOST || p.web.proxyHost; }
+  // Only force a global HTTP proxy if a REAL reachable proxy host is configured.
+  // Otherwise rely on the built-in web content filter (PermittedURLs /
+  // DenyListURLs) — pointing iOS at a dead proxy would break all networking.
+  if (p.web?.mode === 'whitelist' && process.env.FILTER_PROXY_HOST) {
+    p.forceProxy = true;
+    p.web.proxyHost = process.env.FILTER_PROXY_HOST;
+  }
   return profileMap.buildProfile(p);
 }
 

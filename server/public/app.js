@@ -326,12 +326,19 @@ async function renderIos() {
   }
 
   root.append(el('h3', {}, 'Policies → iOS profile'));
-  const t2 = el('table'); t2.append(el('thead', {}, tr(['Policy', 'Level', ''], true)));
+  root.append(el('div', { className: 'card', style: 'margin-bottom:12px' },
+    el('strong', {}, 'Free path — no Apple Developer account needed'),
+    el('div', { className: 'muted', style: 'margin-top:6px' },
+      'Download a policy’s .mobileconfig and install it on a supervised device with the free Apple Configurator app (USB). Enforces app allow/deny, web filter, VPN block and no-uninstall for $0 — the only thing you give up vs. paid MDM is over-the-air push.')));
+  const t2 = el('table'); t2.append(el('thead', {}, tr(['Policy', 'Level', 'Actions'], true)));
   const tb2 = el('tbody');
   for (const p of policies) {
     tb2.append(el('tr', {},
       td(el('strong', {}, p.name)), td('L' + p.body.level),
-      td(el('button', { className: 'small ghost', onclick: () => previewIos(p) }, 'Preview .mobileconfig'))));
+      td(el('div', { className: 'row' },
+        el('a', { href: `/admin/api/ios/policies/${p.id}/profile.mobileconfig` },
+          el('button', { className: 'small' }, '⬇ Download .mobileconfig')),
+        el('button', { className: 'small ghost', onclick: () => previewIos(p) }, 'Preview')))));
   }
   t2.append(tb2); root.append(t2);
 }

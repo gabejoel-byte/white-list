@@ -167,6 +167,17 @@ router.get('/ios/policies/:id/preview', (req, res) => {
   res.set('content-type', 'text/plain').send(ios.policyProfile(p.body));
 });
 
+// Download a policy's .mobileconfig for the FREE path (Apple Configurator /
+// manual install) — no MDM/Apple Developer account needed.
+router.get('/ios/policies/:id/profile.mobileconfig', (req, res) => {
+  const p = db.prepare('SELECT * FROM policies WHERE id = ?').get(+req.params.id);
+  if (!p) return res.status(404).json({ error: 'not_found' });
+  const safe = (p.name || 'policy').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  res.set('content-type', 'application/x-apple-aspen-config');
+  res.set('content-disposition', `attachment; filename="whitelist-${safe}.mobileconfig"`);
+  res.send(ios.policyProfile(p.body));
+});
+
 router.get('/ios/devices', (req, res) => res.json(ios.listDevices()));
 
 // Queue a policy's profile onto an enrolled device (+ APNs wake).

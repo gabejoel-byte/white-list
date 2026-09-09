@@ -52,6 +52,33 @@ dashboard policy ─▶ profile-map.js ─▶ .mobileconfig
 device enrolls (supervised) ─▶ MDM ─▶ InstallProfile(mobileconfig) ─▶ enforced
 ```
 
+## Free path — Apple Configurator (no Developer account, $0)
+
+You do **not** need the $99/yr Apple Developer Program or an MDM push certificate
+to enforce a policy on iOS. Those are only needed for *over-the-air* push. The
+enforcement itself lives in the configuration profile, which you can install for
+free with **Apple Configurator** (a free Mac app):
+
+1. In the dashboard **iOS tab**, click **⬇ Download .mobileconfig** for a policy.
+2. Install **Apple Configurator** from the Mac App Store (free).
+3. Connect the iPhone/iPad by USB. **Prepare** it as **Supervised**
+   (Configurator → Prepare → Manual, "Supervise devices"). This **erases** the
+   device — supervision is what makes the app allow-list, global proxy, and
+   non-removable profile actually enforce.
+4. With the device supervised, drag the downloaded `.mobileconfig` onto it in
+   Configurator (or Add → Profiles). The policy is now enforced.
+5. To change policy later, download the new `.mobileconfig` and re-apply over
+   USB. (Over-the-air updates are the paid-MDM feature.)
+
+Notes:
+- Web filtering here uses Apple's **built-in content filter** (Safari/WebKit):
+  whitelist = only `PermittedURLs` reachable; blacklist/categories =
+  `DenyListURLs` + auto-filter. No proxy/server needed. (A global HTTP proxy is
+  only added to the profile when you set `FILTER_PROXY_HOST` to a real reachable
+  proxy — otherwise it's omitted so networking never breaks.)
+- The profile is unsigned; iOS shows a "not verified" note on install, which is
+  expected for self-issued profiles and does not affect enforcement.
+
 ## Honest limits
 
 - Supervised enrollment is mandatory; you cannot silently manage an existing
