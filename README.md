@@ -17,6 +17,22 @@ allow/deny and category filtering, VPN blocking, and tamper resistance.
                                                   └───────────────────────────┘
 ```
 
+## Platforms
+
+One dashboard and one policy shape; each platform enforces it with the right
+native mechanism. See each folder's README for details and honest limits.
+
+| Platform | Folder | Enforcement | Status |
+|----------|--------|-------------|--------|
+| Windows | [agent/](agent/) | Service agent: process-kill + WDAC/AppLocker/IFEO, filtering proxy, firewall VPN block, watchdog | Built + tested |
+| macOS | [macos/](macos/) | LaunchDaemon agent: process-kill + app-access profile, proxy + pf, shared [core/](core/) | Built + tested |
+| Android | [android/](android/) | Android Management API (managed/Device Owner); wired into the dashboard | Built + tested |
+| iOS / iPadOS | [ios/](ios/) | MDM configuration profiles on a supervised device | Built + tested |
+
+Windows and macOS are installable agents. Android and iOS require **managed
+enrollment** (Device Owner / supervised) — an installed app cannot control a
+phone; that's the OS security model, not a limitation of this code.
+
 ## Three enforcement levels
 
 | Level | Name     | Apps                    | Web                                            | VPN     |

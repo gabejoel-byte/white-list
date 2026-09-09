@@ -5,6 +5,7 @@ const db = require('../db');
 const { token, sha256 } = require('../lib/crypto');
 const { requireAdmin, createSession, verifySecret } = require('../lib/auth');
 const { normalize, preset } = require('../lib/policy');
+const android = require('../lib/android');
 
 const router = express.Router();
 
@@ -125,6 +126,34 @@ router.post('/devices/:id/revoke', (req, res) => {
 
 router.get('/devices/:id/events', (req, res) => {
   res.json(db.prepare('SELECT kind, detail, at FROM events WHERE device_id=? ORDER BY at DESC LIMIT 200').all(req.params.id));
+});
+
+// ---- Android (Android Management API) ----
+router.get('/android/status', (req, res) => res.json(android.status()));
+
+// Preview the AMAPI Policy a stored policy maps to (works without GCP creds).
+router.get('/android/policies/:id/preview', (req, res) => {
+  const p = db.prepare('SELECT * FROM policies WHERE id = ?').get(+req.params.id);
+  if (!p) return res.status(404).json({ error: 'not_found' });
+  res.json(android.preview(p.body));
+});
+
+// Push a stored policy to Android Management API (requires configuration).
+router.post('/android/policies/:id/push', async (req, res) => {
+  const p = db.prepare('SELECT * FROM policies WHERE id = ?').get(+req.params.id);
+  if (!p) return res.status(404).json({ error: 'not_found' });
+  try { res.json(await android.pushPolicy(String(p.id), p.body)); }
+  catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+});
+
+router.post('/android/policies/:id/enrollment-token', async (req, res) => {
+  try { res.json(await android.createEnrollmentToken(String(req.params.id), req.body || {})); }
+  catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+});
+
+router.get('/android/devices', async (req, res) => {
+  try { res.json(await android.listDevices()); }
+  catch (e) { res.status(e.status || 500).json({ error: e.message }); }
 });
 
 module.exports = router;

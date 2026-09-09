@@ -40,6 +40,7 @@ async function render(tab) {
   if (tab === 'devices') return renderDevices();
   if (tab === 'policies') return renderPolicies();
   if (tab === 'keys') return renderKeys();
+  if (tab === 'android') return renderAndroid();
 }
 
 // ---------- devices ----------
@@ -226,6 +227,63 @@ function newKey(policies) {
     el('button', { onclick: async () => { const { key } = await api('POST', '/enrollment-keys', { label: label.value, policyId: pol.value ? +pol.value : null }); box.innerHTML = ''; box.append(el('h2', {}, 'Key created'), el('p', {}, 'Use this in the installer:'), el('p', {}, el('span', { className: 'key mono' }, key)), el('button', { onclick: () => { closeModal(); renderKeys(); } }, 'Done')); } }, 'Create'),
     el('button', { className: 'ghost', onclick: closeModal }, 'Cancel')));
   modal(box);
+}
+
+// ---------- android ----------
+async function renderAndroid() {
+  const root = $('#tab-android'); root.innerHTML = '';
+  const [status, policies] = await Promise.all([api('GET', '/android/status'), api('GET', '/policies')]);
+  root.append(el('h2', {}, 'Android (managed devices)'));
+  root.append(el('p', { className: 'muted' }, 'Enforced by Google’s Android Management API on managed (Device Owner) devices.'));
+
+  const pill = el('span', { className: 'pill ' + (status.configured ? 'on' : 'off') }, status.configured ? 'configured' : 'not configured');
+  root.append(el('div', { className: 'card' },
+    el('div', { className: 'row' }, el('strong', {}, 'AMAPI status:'), pill),
+    el('div', { className: 'muted', style: 'margin-top:6px' },
+      `enterprise: ${status.enterprise || '—'} · credentials: ${status.hasCredentials ? 'yes' : 'no'} · SDK: ${status.sdkLoaded ? 'loaded' : 'not installed'}`),
+    status.configured ? '' : el('small', { className: 'hint', style: 'margin-top:8px' },
+      'Set GOOGLE_APPLICATION_CREDENTIALS + ENTERPRISE_NAME and run npm install in android/ to enable live push. Preview works without it.')));
+
+  root.append(el('h3', {}, 'Policies → Android'));
+  const t = el('table');
+  t.append(el('thead', {}, tr(['Policy', 'Level', 'Actions'], true)));
+  const tb = el('tbody');
+  for (const p of policies) {
+    tb.append(el('tr', {},
+      td(el('strong', {}, p.name)),
+      td('L' + p.body.level),
+      td(el('div', { className: 'row' },
+        el('button', { className: 'small ghost', onclick: () => previewAndroid(p) }, 'Preview AMAPI'),
+        el('button', { className: 'small', disabled: !status.configured, onclick: () => pushAndroid(p) }, 'Push'),
+        el('button', { className: 'small', disabled: !status.configured, onclick: () => enrollAndroid(p) }, 'Enrollment QR'))),
+    ));
+  }
+  t.append(tb); root.append(t);
+}
+
+async function previewAndroid(p) {
+  const mapped = await api('GET', `/android/policies/${p.id}/preview`);
+  const box = el('div', {});
+  box.append(el('h2', {}, 'AMAPI Policy — ' + p.name),
+    el('p', { className: 'muted' }, 'What Android Management API receives for this policy:'),
+    el('pre', { className: 'mono card', style: 'max-height:60vh;overflow:auto' }, JSON.stringify(mapped, null, 2)),
+    el('div', { className: 'row' }, el('button', { className: 'ghost', onclick: closeModal }, 'Close')));
+  modal(box);
+}
+async function pushAndroid(p) {
+  try { await api('POST', `/android/policies/${p.id}/push`); alert('Pushed to Android Management API.'); }
+  catch (e) { alert('Push failed: ' + e.message); }
+}
+async function enrollAndroid(p) {
+  try {
+    const tok = await api('POST', `/android/policies/${p.id}/enrollment-token`, {});
+    const box = el('div', {});
+    box.append(el('h2', {}, 'Enrollment token'), el('p', {}, 'Scan on a factory-reset device (tap 6× on setup):'));
+    if (tok.qrCode) box.append(el('pre', { className: 'mono card', style: 'white-space:pre-wrap;word-break:break-all' }, tok.qrCode));
+    box.append(el('p', {}, el('span', { className: 'key mono' }, tok.value || '(no value)')),
+      el('button', { className: 'ghost', onclick: closeModal }, 'Close'));
+    modal(box);
+  } catch (e) { alert('Token failed: ' + e.message); }
 }
 
 // ---------- helpers ----------
