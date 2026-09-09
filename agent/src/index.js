@@ -6,7 +6,7 @@
 const os = require('os');
 const cfgStore = require('./lib/config');
 const { makeClient } = require('./lib/api');
-const { log, setDryRun, isDryRun } = require('./lib/util');
+const { log, setDryRun, setLive, isDryRun } = require('./lib/util');
 const apps = require('./enforce/apps');
 const web = require('./enforce/web');
 const vpn = require('./enforce/vpn');
@@ -27,7 +27,10 @@ if (!cfg.serverUrl || !cfg.enrollmentKey) {
 }
 if (process.env.WL_SERVER) cfg.serverUrl = process.env.WL_SERVER;
 if (process.env.WL_ENROLL_KEY) cfg.enrollmentKey = process.env.WL_ENROLL_KEY;
-if (process.env.WL_DRY_RUN === '1') setDryRun(true);
+// Running the daemon is an explicit intent to enforce, so it opts into live
+// mode — unless WL_DRY_RUN=1 was set, which wins. Any other entry point
+// (ad-hoc scripts, tests) that never chooses a mode hits the run() guard.
+if (process.env.WL_DRY_RUN === '1') setDryRun(true); else setLive();
 cfgStore.save(cfg);
 
 if (!cfg.serverUrl) { log('FATAL: no serverUrl configured (set WL_SERVER or config.json)'); process.exit(1); }

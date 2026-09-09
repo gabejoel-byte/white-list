@@ -7,6 +7,7 @@
   "bin": { "whitelist-agent": "src/index.js" },
   "scripts": {
     "start": "node src/index.js",
+    "test": "node test/run-tests.js",
     "install-service": "node src/service.js install",
     "uninstall-service": "node src/service.js uninstall",
     "build": "node build.js"

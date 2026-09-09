@@ -16,6 +16,7 @@ function svc() {
     grow: 0.5,
     maxRestarts: 999999,
     env: [
+      { name: 'WL_LIVE', value: '1' }, // explicit: the service enforces for real
       { name: 'WL_DATA_DIR', value: process.env.WL_DATA_DIR || '' },
     ].filter((e) => e.value),
   });

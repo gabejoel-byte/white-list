@@ -13,7 +13,7 @@ const http = require('http');
 const net = require('net');
 const fs = require('fs');
 const path = require('path');
-const { log, run, ps, isDryRun } = require('../lib/util');
+const { log, run, ps, isDryRun, requireMode } = require('../lib/util');
 
 let CATEGORIES = {};
 try { CATEGORIES = require('../data/categories.json'); } catch { CATEGORIES = {}; }
@@ -133,6 +133,7 @@ function buildHostsBlock(web) {
 }
 
 function writeHosts(web) {
+  requireMode('to rewrite the hosts file'); // guard the direct-fs mutation too
   if (isDryRun()) { log('web: (dry) would rewrite hosts block'); return; }
   let content = '';
   try { content = fs.readFileSync(HOSTS_PATH, 'utf8'); } catch { content = ''; }
@@ -143,9 +144,15 @@ function writeHosts(web) {
   catch (e) { log('web: hosts write failed (need admin):', e.message); }
 }
 
+// The WinINET registry key WinINET actually reads. Overridable via
+// WL_PROXY_REGKEY so tests write to a throwaway key and can never touch the
+// machine's real proxy settings.
+const PROXY_REGKEY = process.env.WL_PROXY_REGKEY
+  || 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings';
+
 async function setSystemProxy(web) {
   const enable = web.mode === 'whitelist'; // force everything through the proxy
-  const key = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings';
+  const key = PROXY_REGKEY;
   if (enable) {
     await run('reg.exe', ['add', key, '/v', 'ProxyEnable', '/t', 'REG_DWORD', '/d', '1', '/f']);
     await run('reg.exe', ['add', key, '/v', 'ProxyServer', '/d', `127.0.0.1:${web.proxyPort || 18080}`, '/f']);
@@ -158,13 +165,28 @@ async function setSystemProxy(web) {
   }
 }
 
-async function apply(web) {
+// Set the in-memory filtering rules and start the local proxy. This performs
+// NO system mutation (no registry, hosts, or DNS changes) — safe to call from
+// tests without an execution mode. Splitting this out is measure (1): the part
+// that could brick connectivity is isolated behind integrateSystem().
+function setPolicy(web) {
   currentWeb = web || { mode: 'off' };
   if (currentWeb.mode !== 'off') startProxy(currentWeb.proxyPort || 18080);
-  writeHosts(currentWeb);
-  await setSystemProxy(currentWeb);
-  // Flush DNS so hosts changes take effect immediately.
-  await run('ipconfig.exe', ['/flushdns']);
+  return currentWeb;
+}
+
+// Wire the OS into the proxy: pin the system proxy, rewrite the hosts block,
+// flush DNS. These go through run(), so they inherit the execution-mode guard —
+// calling this without WL_LIVE=1 / WL_DRY_RUN=1 throws instead of mutating.
+async function integrateSystem(web) {
+  writeHosts(web);
+  await setSystemProxy(web);
+  await run('ipconfig.exe', ['/flushdns']); // apply hosts changes immediately
+}
+
+async function apply(web) {
+  setPolicy(web);
+  await integrateSystem(currentWeb);
 }
 
 // Cheap re-assertion for the fast enforcement loop: only re-pin the system
@@ -174,4 +196,8 @@ async function reassertSystemProxy() {
   if (currentWeb.mode === 'whitelist') await setSystemProxy(currentWeb);
 }
 
-module.exports = { apply, reassertSystemProxy, startProxy, verdict, domainMatches, onBlock, buildHostsBlock, categoryDomains };
+module.exports = {
+  apply, setPolicy, integrateSystem, setSystemProxy, reassertSystemProxy,
+  startProxy, verdict, domainMatches, onBlock, buildHostsBlock, categoryDomains,
+  PROXY_REGKEY,
+};
