@@ -1,0 +1,25 @@
+{
+  "_comment": "Seed category → domain map. Small on purpose; production would sync a maintained feed (e.g. a DNS category provider) into this same shape. The agent can also point system DNS at a filtering resolver for broad coverage.",
+  "pornography": [
+    "pornhub.com", "xvideos.com", "xnxx.com", "redtube.com", "youporn.com",
+    "xhamster.com", "onlyfans.com", "chaturbate.com", "livejasmin.com", "brazzers.com"
+  ],
+  "gambling": [
+    "bet365.com", "pokerstars.com", "draftkings.com", "fanduel.com",
+    "888casino.com", "williamhill.com", "betway.com"
+  ],
+  "malware": [
+    "malware.testing.google.test", "eicar.org"
+  ],
+  "social": [
+    "facebook.com", "instagram.com", "tiktok.com", "snapchat.com",
+    "x.com", "twitter.com", "reddit.com"
+  ],
+  "streaming": [
+    "netflix.com", "hulu.com", "twitch.tv", "disneyplus.com"
+  ],
+  "proxies": [
+    "hidemyass.com", "proxysite.com", "kproxy.com", "hide.me",
+    "4everproxy.com", "croxyproxy.com"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "whitelist-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android (managed / Device Owner) enforcement via Google's Android Management API",
+  "main": "src/amapi.js",
+  "scripts": {
+    "test": "node test/policy-map.test.js"
+  },
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}
